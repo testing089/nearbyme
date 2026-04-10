@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#ff5c00"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="NearbyMe"/>
+  <meta name="description" content="Discover hospitals, pharmacies, restaurants and more near you instantly."/>
+
+  <title>NearbyMe — Discover Around You</title>
+
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png"/>
+  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg: #f7f5f0;
+      --white: #ffffff;
+      --dark: #111111;
+      --primary: #ff5c00;
+      --primary-light: #fff0e8;
+      --primary-dark: #cc4900;
+      --green: #00b894;
+      --border: #e8e3da;
+      --muted: #999;
+      --card-shadow: 0 2px 16px rgba(0,0,0,0.07);
+      --font-display: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+      --bottom-nav-height: 68px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: var(--font-body);
+      color: var(--dark);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ====== SPLASH SCREEN ====== */
+    #splash {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--primary);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1rem;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    #splash.hide { opacity: 0; transform: scale(1.05); pointer-events: none; }
+    .splash-logo {
+      width: 90px; height: 90px;
+      background: white;
+      border-radius: 28px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+      animation: splashPop 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+    @keyframes splashPop {
+      from { transform: scale(0.5); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .splash-name {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -0.01em;
+    }
+    .splash-tag {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.75);
+      font-family: var(--font-mono);
+      letter-spacing: 0.1em;
+    }
+    .splash-dots {
+      display: flex; gap: 6px; margin-top: 1.5rem;
+    }
+    .splash-dots span {
+      width: 6px; height: 6px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 50%;
+      animation: dotPulse 1.2s infinite;
+    }
+    .splash-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .splash-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dotPulse {
+      0%, 80%, 100% { background: rgba(255,255,255,0.3); transform: scale(1); }
+      40% { background: white; transform: scale(1.3); }
+    }
+
+    /* ====== APP SHELL ====== */
+    #app {
+      display: flex; flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+    }
+
+    /* ====== TOP BAR ====== */
+    .topbar {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0.9rem 1.2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.04);
+      padding-top: calc(0.9rem + env(safe-area-inset-top, 0px));
+    }
+    .logo {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 800;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .logo-icon {
+      width: 30px; height: 30px;
+      background: var(--primary);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .logo em { font-style: normal; color: var(--primary); }
+
+    .loc-chip {
+      display: flex; align-items: center; gap: 0.35rem;
+      background: var(--primary-light);
+      border: 1px solid rgba(255,92,0,0.15);
+      border-radius: 100px;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--primary);
+      cursor: pointer;
+      transition: all 0.2s;
+      max-width: 160px;
+      overflow: hidden;
+    }
+    .loc-chip-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ====== SCROLL AREA ====== */
+    #mainScroll {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    /* ====== SEARCH SECTION ====== */
+    .search-section {
+      background: linear-gradient(135deg, var(--primary) 0%, #ff7a2f 100%);
+      padding: 1.4rem 1.2rem 2.2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .search-section::after {
+      content: '📍';
+      position: absolute;
+      right: -10px; top: -10px;
+      font-size: 6rem;
+      opacity: 0.08;
+      transform: rotate(15deg);
+    }
+    .search-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 0.3rem;
+      line-height: 1.2;
+    }
+    .search-sub {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.75);
+      margin-bottom: 1.2rem;
+    }
+    .search-bar {
+      display: flex;
+      background: white;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .search-bar input {
+      flex: 1;
+      border: none; outline: none;
+      padding: 0.9rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      color: var(--dark);
+      background: transparent;
+    }
+    .search-bar input::placeholder { color: #bbb; }
+    .search-btn {
+      background: var(--primary);
+      border: none;
+      padding: 0 1.1rem;
+      color: white;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .search-btn:active { background: var(--primary-dark); }
+
+    /* ====== LOCATE BUTTON ====== */
+    .locate-row {
+      display: flex; gap: 0.6rem;
+      margin-top: 0.75rem;
+    }
+    .locate-btn {
+      flex: 1;
+      background: rgba(255,255,255,0.2);
+      border: 1.5px solid rgba(255,255,255,0.35);
+      border-radius: 10px;
+      padding: 0.6rem;
+      color: white;
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+      transition: all 0.2s;
+    }
+    .locate-btn:active { background: rgba(255,255,255,0.3); }
+    .locate-btn.success { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
+
+    /* ====== RADIUS PILLS ====== */
+    .radius-row {
+      display: flex; gap: 0.5rem; align-items: center;
+      padding: 1rem 1.2rem 0.5rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .radius-row::-webkit-scrollbar { display: none; }
+    .radius-label { font-size: 0.75rem; color: var(--muted); font-family: var(--font-mono); white-space: nowrap; }
+    .radius-pill {
+      padding: 0.3rem 0.9rem;
+      border-radius: 100px;
+      border: 1.5px solid var(--border);
+      background: var(--white);
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.18s;
+      color: var(--dark);
+    }
+    .radius-pill.active { border-color: var(--primary); background: var(--primary); color: white; }
+
+    /* ====== CATEGORIES ====== */
+    .section-head {
+      padding: 1rem 1.2rem 0.6rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .section-label {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    .cat-scroll {
+      display: flex; gap: 0.7rem;
+      padding: 0.4rem 1.2rem 1.2rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .cat-scroll::-webkit-scrollbar { display: none; }
+    .cat-chip {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 0.4rem;
+      min-width: 70px;
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 0.8rem 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .cat-chip:active { transform: scale(0.95); }
+    .cat-chip.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+    .cat-chip-icon { font-size: 1.6rem; line-height: 1; }
+    .cat-chip-label {
+      font-size: 0.68rem;
+      font-weight: 500;
+      color: var(--dark);
+      text-align: center;
+      line-height: 1.2;
+    }
+    .cat-chip.active .cat-chip-label { color: var(--primary); font-weight: 700; }
+
+    /* ====== RESULTS ====== */
+    .results-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.2rem 0.8rem;
+    }
+    .results-count {
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: var(--muted);
+    }
+    .results-count strong { color: var(--primary); }
+    .sort-btn {
+      font-size: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.28rem 0.65rem;
+      background: var(--white);
+      cursor: pointer;
+      font-family: var(--font-body);
+      color: var(--dark);
+    }
+
+    /* ====== PLACE CARDS ====== */
+    .places-list {
+      display: flex; flex-direction: column;
+      gap: 0.7rem;
+      padding: 0 1.2rem;
+      padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 1rem);
+    }
+    .place-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+      animation: cardSlide 0.35s ease forwards;
+      opacity: 0;
+      transition: border-color 0.2s;
+    }
+    .place-card:active { transform: scale(0.99); }
+    @keyframes cardSlide {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .card-top {
+      display: flex; align-items: center; gap: 0.9rem;
+      padding: 1rem 1rem 0.7rem;
+    }
+    .card-icon-box {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .card-info { flex: 1; min-width: 0; }
+    .card-name {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-cat {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-top: 0.1rem;
+    }
+    .card-badge {
+      font-size: 0.65rem;
+      font-family: var(--font-mono);
+      padding: 0.2rem 0.55rem;
+      border-radius: 100px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .open { background: #d1fae5; color: #065f46; }
+    .closed { background: #fee2e2; color: #991b1b; }
+
+    .card-addr {
+      padding: 0 1rem 0.7rem;
+      font-size: 0.78rem;
+      color: #777;
+      display: flex; gap: 0.3rem;
+      line-height: 1.4;
+    }
+    .card-meta-row {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0 1rem 0.9rem;
+    }
+    .card-dist {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-family: var(--font-mono);
+      font-size: 0.73rem;
+      color: var(--green);
+      font-weight: 500;
+    }
+    .card-stars {
+      display: flex; align-items: center; gap: 0.25rem;
+      font-size: 0.75rem;
+      color: #f59e0b;
+      font-weight: 600;
+    }
+
+    .card-actions {
+      display: flex; border-top: 1px solid var(--border);
+    }
+    .card-act-btn {
+      flex: 1;
+      padding: 0.7rem;
+      border: none;
+      background: transparent;
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--dark);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+      transition: background 0.15s;
+    }
+    .card-act-btn:active { background: var(--bg); }
+    .card-act-btn + .card-act-btn { border-left: 1px solid var(--border); }
+    .card-act-btn.primary { color: var(--primary); font-weight: 600; }
+
+    /* ====== STATE PANELS ====== */
+    .state-panel {
+      display: none;
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+    .state-panel.visible { display: block; }
+    .state-emoji { font-size: 3.5rem; margin-bottom: 1rem; }
+    .state-title {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    .state-sub { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+    .state-cta {
+      margin-top: 1.5rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 0.8rem 2rem;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ====== BOTTOM NAV ====== */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: calc(var(--bottom-nav-height) + var(--safe-bottom));
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding-bottom: var(--safe-bottom);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+      z-index: 50;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.25rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none; background: transparent;
+      font-family: var(--font-body);
+    }
+    .nav-item:active { transform: scale(0.92); }
+    .nav-icon { font-size: 1.3rem; line-height: 1; }
+    .nav-label { font-size: 0.65rem; font-weight: 500; color: var(--muted); }
+    .nav-item.active .nav-label { color: var(--primary); font-weight: 700; }
+    .nav-item.active .nav-icon { filter: none; }
+    .nav-fab {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .fab {
+      width: 52px; height: 52px;
+      background: var(--primary);
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 4px 16px rgba(255,92,0,0.35);
+      cursor: pointer;
+      border: none;
+      transform: translateY(-10px);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .fab:active { transform: translateY(-10px) scale(0.93); }
+
+    /* ====== TOAST ====== */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 1rem);
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: rgba(17,17,17,0.92);
+      color: white;
+      padding: 0.65rem 1.4rem;
+      border-radius: 100px;
+      font-size: 0.82rem;
+      font-family: var(--font-body);
+      z-index: 999;
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      white-space: nowrap;
+      backdrop-filter: blur(10px);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ====== SORT SHEET ====== */
+    .sheet-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      display: none;
+      backdrop-filter: blur(2px);
+    }
+    .sheet-overlay.show { display: block; }
+    .bottom-sheet {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--white);
+      border-radius: 24px 24px 0 0;
+      padding: 1.5rem 1.2rem;
+      padding-bottom: calc(1.5rem + var(--safe-bottom));
+      z-index: 201;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .bottom-sheet.show { transform: translateY(0); }
+    .sheet-handle {
+      width: 40px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 1.5rem;
+    }
+    .sheet-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    .sheet-option {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .sheet-option:last-child { border-bottom: none; }
+    .sheet-option.active { color: var(--primary); font-weight: 600; }
+    .sheet-check { color: var(--primary); font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">📍</div>
+  <div class="splash-name">NearbyMe</div>
+  <div class="splash-tag">DISCOVER AROUND YOU</div>
+  <div class="splash-dots">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon">📍</div>
+      Nearby<em>Me</em>
+    </div>
+    <div class="loc-chip" onclick="getLocation()">
+      📍 <span class="loc-chip-text" id="locText">Tap to locate</span>
+    </div>
+  </div>
+
+  <!-- SCROLL AREA -->
+  <div id="mainScroll">
+
+    <!-- SEARCH -->
+    <div class="search-section">
+      <div class="search-title">What are you<br/>looking for? 🔍</div>
+      <div class="search-sub">Hospitals, pharmacies, tiffin shops & more</div>
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search anything near you…"/>
+        <button class="search-btn" onclick="handleSearch()">🔍</button>
+      </div>
+      <div class="locate-row">
+        <button class="locate-btn" id="locateBtn" onclick="getLocation()">
+          📍 Use My Location
+        </button>
+      </div>
+    </div>
+
+    <!-- RADIUS -->
+    <div class="radius-row">
+      <span class="radius-label">Within:</span>
+      <button class="radius-pill active" onclick="setRadius(1000,this)">1 km</button>
+      <button class="radius-pill" onclick="setRadius(2000,this)">2 km</button>
+      <button class="radius-pill" onclick="setRadius(5000,this)">5 km</button>
+      <button class="radius-pill" onclick="setRadius(10000,this)">10 km</button>
+    </div>
+
+    <!-- CATEGORIES -->
+    <div class="section-head">
+      <div class="section-label">Categories</div>
+    </div>
+    <div class="cat-scroll" id="catScroll"></div>
+
+    <!-- RESULTS -->
+    <div id="welcomePanel" class="state-panel visible">
+      <div class="state-emoji">🗺️</div>
+      <div class="state-title">Explore Nearby</div>
+      <div class="state-sub">Allow location access and pick a category to discover places around you.</div>
+      <button class="state-cta" onclick="getLocation()">📍 Allow Location</button>
+    </div>
+
+    <div id="loadingPanel" class="state-panel">
+      <div class="spinner"></div>
+      <div class="state-title">Searching nearby…</div>
+      <div class="state-sub">Finding the best places around you</div>
+    </div>
+
+    <div id="errorPanel" class="state-panel">
+      <div class="state-emoji">⚠️</div>
+      <div class="state-title">Location Needed</div>
+      <div class="state-sub">Please allow location access in your browser settings to find nearby places.</div>
+      <button class="state-cta" onclick="getLocation()">Try Again</button>
+    </div>
+
+    <div id="resultsArea" style="display:none">
+      <div class="results-bar">
+        <div class="results-count" id="resultsCount"></div>
+        <button class="sort-btn" onclick="openSortSheet()">⇅ Sort</button>
+      </div>
+      <div class="places-list" id="placesList"></div>
+    </div>
+
+  </div><!-- end mainScroll -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="switchTab('home',this)">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('saved',this)">
+      <span class="nav-icon">🔖</span>
+      <span class="nav-label">Saved</span>
+    </button>
+    <div class="nav-fab">
+      <button class="fab" onclick="getLocation()">📍</button>
+    </div>
+    <button class="nav-item" onclick="switchTab('recent',this)">
+      <span class="nav-icon">🕐</span>
+      <span class="nav-label">Recent</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('settings',this)">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Settings</span>
+    </button>
+  </div>
+</div>
+
+<!-- SORT SHEET -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeSortSheet()"></div>
+<div class="bottom-sheet" id="sortSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Sort Results</div>
+  <div class="sheet-option active" onclick="applySortSheet('distance',this)">
+    <span>📏 Nearest First</span><span class="sheet-check">✓</span>
+  </div>
+  <div class="sheet-option" onclick="applySortSheet('rating',this)">
+    <span>⭐ Highest Rated</span><span></span>
+  </div>
+  <div class="sheet-option" onclick="applySortSheet('name',this)">
+    <span>🔤 Name A–Z</span><span></span>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const CATS = [
+    { id:'hospital',   label:'Hospital',       icon:'🏥', color:'#fee2e2', q:'hospital' },
+    { id:'pharmacy',   label:'Pharmacy',       icon:'💊', color:'#d1fae5', q:'pharmacy' },
+    { id:'grocery',    label:'DMart',          icon:'🛒', color:'#dbeafe', q:'dmart grocery supermarket' },
+    { id:'tiffin',     label:'Tiffin',         icon:'🍱', color:'#fef3c7', q:'tiffin shop' },
+    { id:'restaurant', label:'Restaurant',     icon:'🍽️', color:'#ede9fe', q:'restaurant' },
+    { id:'park',       label:'Grounds',        icon:'🌳', color:'#d1fae5', q:'park ground playground' },
+    { id:'bank',       label:'Bank/ATM',       icon:'🏦', color:'#fef3c7', q:'bank ATM' },
+    { id:'petrol',     label:'Petrol',         icon:'⛽', color:'#fee2e2', q:'petrol pump fuel' },
+    { id:'school',     label:'School',         icon:'🏫', color:'#dbeafe', q:'school' },
+    { id:'gym',        label:'Gym',            icon:'💪', color:'#ede9fe', q:'gym fitness' },
+    { id:'temple',     label:'Temple',         icon:'🛕', color:'#fef9e7', q:'temple mandir' },
+    { id:'police',     label:'Police',         icon:'🚔', color:'#fee2e2', q:'police station' },
+    { id:'cafe',       label:'Café',           icon:'☕', color:'#fdf4dc', q:'cafe coffee shop' },
+    { id:'clinic',     label:'Clinic',         icon:'🩺', color:'#fce7f3', q:'clinic doctor' },
+  ];
+
+  let userLat=null, userLng=null, currentRadius=1000;
+  let currentPlaces=[], activeCat=null, sortMode='distance';
+
+  // Build categories
+  const catScroll = document.getElementById('catScroll');
+  CATS.forEach(cat => {
+    const el = document.createElement('div');
+    el.className = 'cat-chip';
+    el.id = 'cat-'+cat.id;
+    el.innerHTML = `<span class="cat-chip-icon">${cat.icon}</span><span class="cat-chip-label">${cat.label}</span>`;
+    el.onclick = () => selectCat(cat);
+    catScroll.appendChild(el);
+  });
+
+  function selectCat(cat) {
+    document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('cat-'+cat.id).classList.add('active');
+    activeCat = cat;
+    if (userLat && userLng) searchNearby(cat);
+    else getLocation(() => searchNearby(cat));
+  }
+
+  function getLocation(cb) {
+    const btn = document.getElementById('locateBtn');
+    btn.textContent = '⏳ Locating…';
+    if (!navigator.geolocation) { showState('errorPanel'); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+        document.getElementById('locText').textContent = `${userLat.toFixed(3)}, ${userLng.toFixed(3)}`;
+        btn.textContent = '✅ Located';
+        btn.classList.add('success');
+        showToast('📍 Location detected!');
+        if (cb) cb();
+        else if (activeCat) searchNearby(activeCat);
+      },
+      () => { btn.textContent = '📍 Use My Location'; showState('errorPanel'); showToast('❌ Location denied'); },
+      { enableHighAccuracy:true, timeout:12000 }
+    );
+  }
+
+  function setRadius(r, el) {
+    currentRadius = r;
+    document.querySelectorAll('.radius-pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    if (activeCat && userLat) searchNearby(activeCat);
+  }
+
+  function handleSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+    const fakeCat = { id:'search', label:q, icon:'🔍', color:'#f3f4f6', q };
+    activeCat = fakeCat;
+    document.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('active'));
+    if (userLat) searchNearby(fakeCat);
+    else getLocation(() => searchNearby(fakeCat));
+  }
+
+  document.getElementById('searchInput').addEventListener('keydown', e => { if(e.key==='Enter') handleSearch(); });
+
+  async function searchNearby(cat) {
+    showState('loadingPanel');
+    const q = cat.q.toLowerCase();
+    let filters = [];
+    if (q.includes('hospital')) filters=['node["amenity"="hospital"]','way["amenity"="hospital"]'];
+    else if (q.includes('pharmacy')) filters=['node["amenity"="pharmacy"]','way["amenity"="pharmacy"]'];
+    else if (q.includes('dmart')||q.includes('supermarket')||q.includes('grocery')) filters=['node["shop"="supermarket"]','node["shop"="grocery"]','way["shop"="supermarket"]'];
+    else if (q.includes('tiffin')||q.includes('meal')) filters=['node["amenity"="restaurant"]','node["cuisine"="indian"]','node["amenity"="fast_food"]'];
+    else if (q.includes('restaurant')) filters=['node["amenity"="restaurant"]','way["amenity"="restaurant"]'];
+    else if (q.includes('park')||q.includes('ground')||q.includes('playground')) filters=['node["leisure"="park"]','way["leisure"="park"]','way["leisure"="playground"]'];
+    else if (q.includes('bank')||q.includes('atm')) filters=['node["amenity"="bank"]','node["amenity"="atm"]'];
+    else if (q.includes('petrol')||q.includes('fuel')) filters=['node["amenity"="fuel"]','way["amenity"="fuel"]'];
+    else if (q.includes('school')) filters=['node["amenity"="school"]','way["amenity"="school"]'];
+    else if (q.includes('gym')||q.includes('fitness')) filters=['node["leisure"="fitness_centre"]'];
+    else if (q.includes('temple')||q.includes('mandir')) filters=['node["amenity"="place_of_worship"]["religion"="hindu"]'];
+    else if (q.includes('police')) filters=['node["amenity"="police"]'];
+    else if (q.includes('cafe')||q.includes('coffee')) filters=['node["amenity"="cafe"]','node["amenity"="coffee_shop"]'];
+    else if (q.includes('clinic')||q.includes('doctor')) filters=['node["amenity"="clinic"]','node["amenity"="doctors"]'];
+    else filters=[`node["name"~"${cat.q}",i]`,`way["name"~"${cat.q}",i]`];
+
+    const parts = filters.map(f=>`${f}(around:${currentRadius},${userLat},${userLng});`).join('\n');
+    const oq=`[out:json][timeout:25];(\n${parts}\n);out center 30;`;
+    try {
+      const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(oq)}`);
+      const data = await res.json();
+      currentPlaces = (data.elements||[])
+        .filter(el=>el.tags&&el.tags.name)
+        .slice(0,30)
+        .map(el=>{
+          const lat=el.lat||(el.center&&el.center.lat);
+          const lon=el.lon||(el.center&&el.center.lon);
+          return {
+            id:el.id, name:el.tags.name,
+            category:cat.label, icon:cat.icon, color:cat.color,
+            address: buildAddr(el.tags),
+            distance: haversine(userLat,userLng,lat,lon),
+            rating: (3.5+Math.random()*1.5).toFixed(1),
+            open: el.tags.opening_hours==='24/7'?true:(Math.random()>0.3),
+            phone: el.tags.phone||el.tags['contact:phone']||null,
+            lat, lon
+          };
+        })
+        .filter(p=>p.lat&&p.lon);
+      if (!currentPlaces.length) currentPlaces = demoPlaces(cat, 6);
+    } catch(e) {
+      currentPlaces = demoPlaces(cat, 6);
+    }
+    sortAndRender();
+  }
+
+  function buildAddr(t) {
+    const p=[];
+    if(t['addr:housenumber']) p.push(t['addr:housenumber']);
+    if(t['addr:street']) p.push(t['addr:street']);
+    if(t['addr:suburb']) p.push(t['addr:suburb']);
+    if(t['addr:city']) p.push(t['addr:city']);
+    return p.join(', ')||t['addr:full']||'Address not listed';
+  }
+
+  function haversine(la1,lo1,la2,lo2) {
+    const R=6371000, d2r=Math.PI/180;
+    const dLa=(la2-la1)*d2r, dLo=(lo2-lo1)*d2r;
+    const a=Math.sin(dLa/2)**2+Math.cos(la1*d2r)*Math.cos(la2*d2r)*Math.sin(dLo/2)**2;
+    return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+  }
+
+  function fmtDist(m) { return m>=1000?(m/1000).toFixed(1)+' km':m+' m'; }
+
+  function demoPlaces(cat,n) {
+    const names={
+      Hospital:['City General Hospital','Apollo Clinic','Fortis Healthcare','Sai Medical Centre','LifeCare Hospital'],
+      Pharmacy:['MedPlus Pharmacy','Apollo Pharmacy','Jan Aushadhi','Health First Pharmacy'],
+      DMart:['DMart Superstore','Big Bazaar','Reliance Fresh','More Supermarket'],
+      Tiffin:['Shri Ram Tiffin','Homemade Meals','Annapurna Tiffin','Sai Tiffin Centre'],
+      Restaurant:['Udupi Palace','Saravana Bhavan','Haldiram\'s','Punjab Dhaba'],
+      Grounds:['Gandhi Maidan','Nehru Park','Subhash Ground','City Sports Complex'],
+      'Bank/ATM':['SBI Bank','HDFC ATM','Axis Bank','ICICI Branch'],
+      Petrol:['Indian Oil','BPCL Pump','HP Petrol','Reliance Fuel'],
+      School:['Delhi Public School','Kendriya Vidyalaya','St. Mary\'s','Ryan International'],
+      Gym:["Gold's Gym",'Anytime Fitness','Cult.fit','Power Zone'],
+      Temple:['Shri Ram Mandir','Ganesh Temple','Hanuman Mandir','Shiva Temple'],
+      Police:['City Police Station','Traffic Police Post','Police Outpost'],
+      Café:['Café Coffee Day','Starbucks','Barista','Third Wave Coffee'],
+      Clinic:['Apollo Clinic','Dr. Sharma\'s Clinic','City Health Centre','Mediplus Clinic'],
+    };
+    const nl = names[cat.label]||['Place A','Place B','Place C'];
+    return Array.from({length:n},(_,i)=>({
+      id:i, name:nl[i%nl.length], category:cat.label, icon:cat.icon, color:cat.color,
+      address:['MG Road','Station Road','Main Market','Near Bus Stand','Sector 12'][i%5],
+      distance: Math.round(200+Math.random()*currentRadius*0.8),
+      rating:(3.5+Math.random()*1.5).toFixed(1),
+      open:Math.random()>0.3, phone:null,
+      lat:userLat+(Math.random()-0.5)*0.018,
+      lon:userLng+(Math.random()-0.5)*0.018,
+    })).sort((a,b)=>a.distance-b.distance);
+  }
+
+  function sortAndRender() {
+    let s=[...currentPlaces];
+    if(sortMode==='distance') s.sort((a,b)=>a.distance-b.distance);
+    else if(sortMode==='rating') s.sort((a,b)=>b.rating-a.rating);
+    else s.sort((a,b)=>a.name.localeCompare(b.name));
+    renderPlaces(s);
+  }
+
+  function renderPlaces(places) {
+    hideStates();
+    const area=document.getElementById('resultsArea');
+    const list=document.getElementById('placesList');
+    const count=document.getElementById('resultsCount');
+    if(!places||!places.length){
+      showState('welcomePanel');
+      document.getElementById('welcomePanel').querySelector('.state-title').textContent='No results found';
+      document.getElementById('welcomePanel').querySelector('.state-sub').textContent='Try a larger radius or a different category.';
+      return;
+    }
+    area.style.display='block';
+    count.innerHTML=`<strong>${places.length}</strong> places within ${fmtDist(currentRadius)}`;
+    list.innerHTML=places.map((p,i)=>`
+      <div class="place-card" style="animation-delay:${i*35}ms">
+        <div class="card-top">
+          <div class="card-icon-box" style="background:${p.color}">${p.icon}</div>
+          <div class="card-info">
+            <div class="card-name">${p.name}</div>
+            <div class="card-cat">${p.category}</div>
+          </div>
+          <span class="card-badge ${p.open?'open':'closed'}">${p.open?'Open':'Closed'}</span>
+        </div>
+        <div class="card-addr">📍 ${p.address}</div>
+        <div class="card-meta-row">
+          <span class="card-dist">📏 ${fmtDist(p.distance)}</span>
+          <span class="card-stars">⭐ ${p.rating}</span>
+        </div>
+        <div class="card-actions">
+          <button class="card-act-btn" onclick="callPlace('${p.phone||''}')">📞 Call</button>
+          <button class="card-act-btn" onclick="sharePlace('${p.name}',${p.lat},${p.lon})">↗ Share</button>
+          <button class="card-act-btn primary" onclick="openMaps(${p.lat},${p.lon},'${p.name.replace(/'/g,"\\'")}')">🗺️ Go</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openMaps(lat,lon,name) {
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`,'_blank');
+  }
+  function callPlace(phone) {
+    if(phone) window.location.href='tel:'+phone;
+    else showToast('No phone number available');
+  }
+  function sharePlace(name,lat,lon) {
+    const url=`https://www.google.com/maps?q=${lat},${lon}`;
+    if(navigator.share) navigator.share({title:name,url});
+    else { navigator.clipboard?.writeText(url); showToast('📋 Link copied!'); }
+  }
+
+  function showState(id) {
+    hideStates();
+    document.getElementById(id).classList.add('visible');
+    document.getElementById(id).style.display='block';
+    document.getElementById('resultsArea').style.display='none';
+  }
+  function hideStates() {
+    ['welcomePanel','loadingPanel','errorPanel'].forEach(id=>{
+      document.getElementById(id).classList.remove('visible');
+      document.getElementById(id).style.display='none';
+    });
+  }
+
+  function showToast(msg) {
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2600);
+  }
+
+  function switchTab(tab,el) {
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    el.classList.add('active');
+    if(tab!=='home') showToast(`${tab.charAt(0).toUpperCase()+tab.slice(1)} coming soon!`);
+  }
+
+  function openSortSheet() {
+    document.getElementById('sheetOverlay').classList.add('show');
+    document.getElementById('sortSheet').classList.add('show');
+  }
+  function closeSortSheet() {
+    document.getElementById('sheetOverlay').classList.remove('show');
+    document.getElementById('sortSheet').classList.remove('show');
+  }
+  function applySortSheet(mode,el) {
+    sortMode=mode;
+    document.querySelectorAll('.sheet-option').forEach(o=>{
+      o.classList.remove('active');
+      o.querySelector('span:last-child').textContent='';
+    });
+    el.classList.add('active');
+    el.querySelector('span:last-child').textContent='✓';
+    closeSortSheet();
+    if(currentPlaces.length) sortAndRender();
+  }
+
+  // Splash dismiss
+  window.addEventListener('load',()=>{
+    setTimeout(()=>{
+      document.getElementById('splash').classList.add('hide');
+      setTimeout(()=>document.getElementById('splash').remove(),600);
+    },2000);
+    if(navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos=>{
+        userLat=pos.coords.latitude; userLng=pos.coords.longitude;
+        document.getElementById('locText').textContent=`${userLat.toFixed(3)}, ${userLng.toFixed(3)}`;
+        document.getElementById('locateBtn').textContent='✅ Located';
+        document.getElementById('locateBtn').classList.add('success');
+        showToast('📍 Location auto-detected!');
+      },()=>{});
+    }
+  });
+
+  // Service Worker
+  if('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+</script>
+</body>
+</html>
